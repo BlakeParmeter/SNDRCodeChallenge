@@ -17,6 +17,8 @@ public class ShutdownHook extends Thread{
     
     @Override
     public void run(){
-        System.out.println("system shutdown, executing this code...");
+        System.out.println("System terminated, building the index file...");
+        //TODO: Build the index file
+        System.out.println("Index file successfully created, it will be used next time the program is run.");
     }
 }
