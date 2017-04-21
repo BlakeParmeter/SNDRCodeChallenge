@@ -25,6 +25,8 @@ import java.util.concurrent.Executors;
 public class Application {
     
     private static long currentIndex = 0;
+    private static long startIndex = 0;
+    private static long maxValues = -1L;
     private static final List<CorporaReader> CORPORA_READERS = new ArrayList();
     private static final Scanner INPUT_SCANNER = new Scanner(System.in);
     
@@ -58,10 +60,18 @@ public class Application {
         //Test for index file and load if found. 
         //TODO:
         
+        //calculate the total number of possible phrases
+        maxValues = 1;
+        for(CorporaReader reader : CORPORA_READERS){
+            maxValues *= reader.CORPORA_SIZE;
+        }
+        
         //Print welcome text
-        System.err.println("System successfully started!\n"
-                + "Welcome to the disparate corpora generator!\n"
-                + CORPORA_READERS.size() + " corpora files have been read into the system.");
+        System.err.println(
+                "Welcome to the disparate corpora generator!\n" + 
+                CORPORA_READERS.size() + " corpora files have been read into the system. " + 
+                "These files allow for " + maxValues + " possible phrases. So far: " + currentIndex +
+                " phrases have been generated.");
         
         //begin the user input read function
         USER_INPUT_EXECUTOR.submit(new UserInputTask());
@@ -75,20 +85,40 @@ public class Application {
      */
     public static synchronized String getNextDisparateCorpora() throws IOException{
         
-        long start = System.currentTimeMillis();
+        //Handles ensuring that we havent went over the allowed files
+        boolean lastPhrase = startIndex == currentIndex;
+        if(startIndex == currentIndex + 1){
+            System.err.println("You have excausted all possible unique iterations "
+                    + "for the data set! Thank you for using this program! To continue "
+                    + "using this program you must specify new input files.");
+            System.exit(0);
+        }
         
+        //Initalize values
+        List<Long> indexes = getCorporaIndexes();
         String retVal = "";
-        for(CorporaReader reader : CORPORA_READERS){
-            String str = reader.getCorporaAtIndex(1).toLowerCase();
+        
+        //get the indexes from the corpora
+        for(int i = 0; i < indexes.size(); i++){
+            String str = CORPORA_READERS.get(i).getCorporaAtIndex(indexes.get(i)).toLowerCase();
             retVal += Character.toUpperCase(str.charAt(0));
             if(str.length() > 2){
                 retVal += str.substring(1);
             }
         }
         
-        System.out.println("The operation took " + (System.currentTimeMillis() - start) + " ms.");
-        
-        currentIndex++;
+        //iterates the current index
+        currentIndex = (currentIndex + 1) % maxValues;
+        return retVal;
+    }
+    
+    private static List<Long> getCorporaIndexes() {
+        List<Long> retVal = new ArrayList();
+        long divisor = 1;
+        for(CorporaReader reader : CORPORA_READERS){
+            retVal.add(currentIndex/divisor%reader.CORPORA_SIZE);
+            divisor *= reader.CORPORA_SIZE;
+        }
         return retVal;
     }
     
@@ -104,7 +134,7 @@ public class Application {
             
             try{
                 System.out.println(getNextDisparateCorpora());
-            }catch (IOException ex){
+            }catch (Exception ex){
                 ex.printStackTrace(System.err);
             }
             USER_INPUT_EXECUTOR.submit(new UserInputTask());

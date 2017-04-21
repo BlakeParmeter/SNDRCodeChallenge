@@ -16,15 +16,7 @@ import java.net.URL;
  */
 public class CorporaURLReader extends CorporaReader{
     
-    private final URL URL;
-    
     public CorporaURLReader(URL url) throws Exception {
         super(new JsonFactory().createParser(url));
-        URL = url;
-    }
-
-    @Override
-    public JsonParser createParser() throws IOException{
-        return new JsonFactory().createParser(URL);
     }
 }

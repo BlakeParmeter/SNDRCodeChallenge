@@ -16,15 +16,7 @@ import java.io.IOException;
  */
 public class CorporaFileReader extends CorporaReader{
     
-    private final File FILE;
-    
     public CorporaFileReader(File file) throws Exception {
         super(new JsonFactory().createParser(file));
-        FILE = file;
-    }
-
-    @Override
-    public JsonParser createParser() throws IOException{
-        return new JsonFactory().createParser(FILE);
     }
 }

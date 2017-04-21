@@ -7,9 +7,10 @@ package com.blakeparmeter.sndrcodechallenge.CorporaReader;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.core.TreeNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ValueNode;
 import java.io.IOException;
-import java.util.zip.CRC32;
-import java.util.zip.Checksum;
 
 /**
  * Reads the Json Parser.
@@ -17,44 +18,30 @@ import java.util.zip.Checksum;
  */
 public abstract class CorporaReader {
     
-    public final long CORPORA_SIZE;
-    public final long CHECKSUM;
+    public final int CORPORA_SIZE;
+    public final TreeNode ROOT_NODE;  
     
     public CorporaReader(JsonParser parser) throws Exception{
         moveParserToStartOfFirstArray(parser);
-        
-        //calculates the size of the list and the checksum.
-        Checksum checksum = new CRC32();
-        String val = getNextValidString(parser);
-        long size = 0;
-        while(val != null){
-            byte[] bytes = val.getBytes();
-            checksum.update(bytes, 0, bytes.length);
-            val = getNextValidString(parser);
-            size ++;
-        }
-        
-        CORPORA_SIZE = size;
-        CHECKSUM = checksum.getValue();
-        parser.close();
+        ObjectMapper mapper = new ObjectMapper();
+        ROOT_NODE = mapper.readTree(parser);   
+        CORPORA_SIZE = ROOT_NODE.size();
     }
     
-    public abstract JsonParser createParser() throws IOException;
-    
-    public String getCorporaAtIndex(long index) throws IOException{
-        if(index > CORPORA_SIZE-1){
-            throw new RuntimeException("Corpra index " + index + " is out of bounds.");
+    /**
+     * Gets the index form the Root Node found in the constructor
+     * @param index The index to get
+     * @return The value at the index
+     */
+    public String getCorporaAtIndex(long index){
+        TreeNode val = ROOT_NODE.get((int) index);
+        if(val.isValueNode()){
+            return ((ValueNode)val).asText();
+        }else if(val.isObject()){
+            return ((ValueNode)val.get(val.fieldNames().next())).asText();
+        }else{
+            throw new RuntimeException("JSON Token type: " + val.asToken() + " is not supported.");
         }
-        JsonParser parser = createParser();
-        moveParserToStartOfFirstArray(parser);
-        
-        String val = null;
-        for(int i=0; i <= index; i++){
-            val = getNextValidString(parser);
-        }
-        
-        parser.close();
-        return val;
     }
     
     /**
@@ -67,42 +54,5 @@ public abstract class CorporaReader {
                 throw new RuntimeException("JSON documnet not valid, an array could not be found.");
             }
         }
-    }
-    
-    /**
-     * Returns the first value string found and moves the parser such that it will be on a valid value string. 
-     * @param parser 
-     */
-    private String getNextValidString(JsonParser parser) throws IOException{
-        String retVal = null;
-        while(parser.currentToken() != null){
-            
-            switch (parser.currentToken()) {
-                case END_ARRAY:
-                    parser.clearCurrentToken();
-                    return null;
-                    
-                //If we find a value string then we'll assume the next token is also a value string
-                case VALUE_STRING:
-                    retVal = parser.getText();
-                    parser.nextToken();
-                    return retVal;
-                    
-                //If we find a start object then return the first value string and run until an end object.
-                case START_OBJECT:
-                    while(parser.nextToken() != JsonToken.END_OBJECT){
-                        if(retVal == null && parser.currentToken() == JsonToken.VALUE_STRING){
-                            retVal = parser.getText();
-                        }
-                    }
-                    return retVal;
-                    
-                //Look for the next value     
-                default:               
-                    parser.nextToken();
-
-            }
-        }
-        return null;
     }
 }
