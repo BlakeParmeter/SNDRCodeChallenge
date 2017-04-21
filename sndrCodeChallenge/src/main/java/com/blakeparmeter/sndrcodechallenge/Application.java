@@ -29,9 +29,6 @@ public class Application {
     private static final List<CorporaReader> CORPORA_READERS = new ArrayList();
     private static final Scanner INPUT_SCANNER = new Scanner(System.in);
     private static final List<Long> shuffleSeeds = new ArrayList();
-    private static final int NUM_SHUFFLES = 500;
-    private static final double MAX_RANDOM = 35000;
-    
     
     //Using an executor service so we have a named thread for reading and so
     //subsequent calls are not loaded on the call stack
@@ -69,9 +66,7 @@ public class Application {
             maxPhrases *= reader.CORPORA_SIZE;
         }
         
-        for(int i = 0; i < NUM_SHUFFLES; i++){
-            shuffleSeeds.add((long)(Math.random()*(double)MAX_RANDOM));
-        }
+        shuffleSeeds.addAll(getFactors(maxPhrases));
         
         //Print welcome text TODO: Format numbers and fix bug with the generated phrases for the overlap case.
         System.out.println("Welcome to the disparate corpora generator!\n" + 
@@ -123,7 +118,7 @@ public class Application {
     private static List<Long> getCorporaIndexes() {
         
         long indexToUse = currentIndex;
-        indexToUse = shuffle(indexToUse);
+        indexToUse = shuffle(shuffleSeeds, indexToUse);
         
         List<Long> retVal = new ArrayList();
         long divisor = 1;
@@ -132,19 +127,6 @@ public class Application {
             divisor *= reader.CORPORA_SIZE;
         }
         return retVal;
-    }
-    
-    private static long shuffle(long index){
-        for(long mag : shuffleSeeds){
-            index = shuffle(mag, index);
-        }
-        return index;
-    }
-    
-    private static long shuffle(long magnitude, long index){
-        long modulo = index % magnitude;
-        long bucket = index / magnitude;
-        return bucket * magnitude + (magnitude - modulo);
     }
     
     private static class UserInputTask implements Runnable{
@@ -164,6 +146,32 @@ public class Application {
             }
             USER_INPUT_EXECUTOR.submit(new UserInputTask());
         }
+    }
+    
+    private static List<Long> getFactors(long num){
+        List<Long> retVal = new ArrayList();
+        for(long i = 2; i <= Math.sqrt(num); i++) {
+            if(num % i == 0) {
+                retVal.add(i);
+                if(i != num/i) {
+                    retVal.add(num/i);
+                }
+            }
+        }
+        return retVal;
+    }
+    
+    private static long shuffle(List<Long> seeds, long index){
+        for(long mag : seeds){
+            index = shuffle(mag, index);
+        }
+        return index;
+    }
+    
+    private static long shuffle(long magnitude, long index){
+        long modulo = index % magnitude;
+        long bucket = index / magnitude;
+        return bucket * magnitude + (magnitude - modulo);
     }
 }
 
