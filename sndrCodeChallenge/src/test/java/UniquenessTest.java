@@ -20,10 +20,10 @@ import org.junit.Test;
  */
 public class UniquenessTest {
     
-    private static final int NUM_THREADS = 2;
+    private static final int NUM_THREADS = 4;
     private AtomicLong counter = new AtomicLong(0);
     private final ExecutorService THREAD_POOL = Executors.newFixedThreadPool(NUM_THREADS);
-    private final long TEST_DURATION = 60*1000;//ms
+    private final long TEST_DURATION = 10 * 1000;//ms
         
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
@@ -38,7 +38,6 @@ public class UniquenessTest {
         
         //Start the application
         
-        
         long start = System.currentTimeMillis();
         Set<String> values = Collections.synchronizedSet(new HashSet());
         for(int i = 0; i < NUM_THREADS; i++){
@@ -50,9 +49,9 @@ public class UniquenessTest {
             THREAD_POOL.shutdown();
             long duration = System.currentTimeMillis() - start;
             long numRecords = counter.get();
-            System.out.println("The test has run for " + (duration / (1000 * 60)) + " mins.");
-            System.out.println("There has been " + counter.get() / 1_000_000 + " million phrases made.");
-            System.out.println(numRecords / (duration * 1000 * 1000) + "k phrases / sec.");
+            System.out.println("The test has run for " + duration / 1000 + "." + duration%1000+" seconds.");
+            System.out.println("~"+numRecords / 1000 + "k phrases were generated.");
+            System.out.println((numRecords/(duration/1000)/1000) + "k phrases / sec.");
         }catch(Exception ex){
             
         }
@@ -79,7 +78,7 @@ public class UniquenessTest {
                 //increments the counter and prints a status message
                 long count = counter.incrementAndGet();
                 if(count % 10000 == 0){
-                    System.out.println("there has been " + (count / 1000) + "k phrases generated.");
+                    System.out.println((count / 1000) + "k phrases have been generated.");
                 }
             }catch(Exception ex){
                 ex.printStackTrace(System.err);
