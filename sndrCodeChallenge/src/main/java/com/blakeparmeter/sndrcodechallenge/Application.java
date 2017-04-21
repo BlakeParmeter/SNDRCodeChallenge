@@ -24,8 +24,8 @@ import java.util.concurrent.Executors;
  */
 public class Application {
     
-    private static long currentIndex = 0;
-    private static long startIndex = -1;
+    private static long currentIndex = -1L;
+    private static long startIndex = -1L;
     private static long maxPhrases = -1L;
     private static final List<CorporaReader> CORPORA_READERS = new ArrayList();
     private static final Scanner INPUT_SCANNER = new Scanner(System.in);
@@ -66,8 +66,14 @@ public class Application {
             maxPhrases *= reader.CORPORA_SIZE;
         }
         
-        //Print welcome text
-        System.err.println("Welcome to the disparate corpora generator!\n" + 
+        //initalizes the current index if it's not been laoded from a file.
+        if(currentIndex == -1L){
+            //currentIndex = ((long)(Math.random() * maxPhrases) + System.currentTimeMillis()) % maxPhrases;
+            currentIndex = 0;
+        }
+        
+        //Print welcome text TODO: Format numbers and fix bug with the generated phrases for the overlap case.
+        System.out.println("Welcome to the disparate corpora generator!\n" + 
                 CORPORA_READERS.size() + " corpora files have been read into the system. " + 
                 "These files allow for " + maxPhrases + " possible phrases. So far: " + 
                 (currentIndex - (startIndex == -1L ? 0L : startIndex)) + " phrases have been generated.");
@@ -78,8 +84,7 @@ public class Application {
     }
     
     /**
-     * 
-     * @return 
+     * @return The next unique phrase available to the system.
      * @throws java.io.IOException
      */
     public static synchronized String getNextDisparateCorpora() throws IOException{
