@@ -25,8 +25,8 @@ import java.util.concurrent.Executors;
 public class Application {
     
     private static long currentIndex = 0;
-    private static long startIndex = 0;
-    private static long maxValues = -1L;
+    private static long startIndex = -1;
+    private static long maxPhrases = -1L;
     private static final List<CorporaReader> CORPORA_READERS = new ArrayList();
     private static final Scanner INPUT_SCANNER = new Scanner(System.in);
     
@@ -61,17 +61,16 @@ public class Application {
         //TODO:
         
         //calculate the total number of possible phrases
-        maxValues = 1;
+        maxPhrases = 1;
         for(CorporaReader reader : CORPORA_READERS){
-            maxValues *= reader.CORPORA_SIZE;
+            maxPhrases *= reader.CORPORA_SIZE;
         }
         
         //Print welcome text
-        System.err.println(
-                "Welcome to the disparate corpora generator!\n" + 
+        System.err.println("Welcome to the disparate corpora generator!\n" + 
                 CORPORA_READERS.size() + " corpora files have been read into the system. " + 
-                "These files allow for " + maxValues + " possible phrases. So far: " + currentIndex +
-                " phrases have been generated.");
+                "These files allow for " + maxPhrases + " possible phrases. So far: " + 
+                (currentIndex - (startIndex == -1L ? 0L : startIndex)) + " phrases have been generated.");
         
         //begin the user input read function
         USER_INPUT_EXECUTOR.submit(new UserInputTask());
@@ -86,19 +85,22 @@ public class Application {
     public static synchronized String getNextDisparateCorpora() throws IOException{
         
         //Handles ensuring that we havent went over the allowed files
-        boolean lastPhrase = startIndex == currentIndex;
-        if(startIndex == currentIndex + 1){
+        if(startIndex == currentIndex){
             System.err.println("You have excausted all possible unique iterations "
                     + "for the data set! Thank you for using this program! To continue "
                     + "using this program you must specify new input files.");
             System.exit(0);
+            
+        //Initalizes the start index if this is the first run
+        }else if(startIndex == -1){
+            startIndex = currentIndex;
         }
         
-        //Initalize values
+        //Determine index values
         List<Long> indexes = getCorporaIndexes();
         String retVal = "";
         
-        //get the indexes from the corpora
+        //get the values from the corpora readers and format.
         for(int i = 0; i < indexes.size(); i++){
             String str = CORPORA_READERS.get(i).getCorporaAtIndex(indexes.get(i)).toLowerCase();
             retVal += Character.toUpperCase(str.charAt(0));
@@ -108,7 +110,7 @@ public class Application {
         }
         
         //iterates the current index
-        currentIndex = (currentIndex + 1) % maxValues;
+        currentIndex = (currentIndex + 1) % maxPhrases;
         return retVal;
     }
     
