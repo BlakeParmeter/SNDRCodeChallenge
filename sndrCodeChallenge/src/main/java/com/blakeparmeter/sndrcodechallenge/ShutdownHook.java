@@ -11,10 +11,6 @@ package com.blakeparmeter.sndrcodechallenge;
  */
 public class ShutdownHook extends Thread{
     
-    public ShutdownHook(){
-        System.out.println("com.blakeparmeter.sndrcodechallenge.ShutdownHook.<init>()");
-    }
-    
     @Override
     public void run(){
         System.out.println("System terminated, building the index file...");
