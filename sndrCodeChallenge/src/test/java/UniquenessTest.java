@@ -23,7 +23,7 @@ public class UniquenessTest {
     private static final int NUM_THREADS = 4;
     private AtomicLong counter = new AtomicLong(0);
     private final ExecutorService THREAD_POOL = Executors.newFixedThreadPool(NUM_THREADS);
-    private final long TEST_DURATION = 10 * 1000;//ms
+    private final long TEST_DURATION = 5 * 60 * 1000;//ms
         
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
@@ -47,8 +47,8 @@ public class UniquenessTest {
         try{
             Thread.sleep(TEST_DURATION);
             THREAD_POOL.shutdown();
-            long duration = System.currentTimeMillis() - start;
             long numRecords = counter.get();
+            long duration = System.currentTimeMillis() - start;
             System.out.println("The test has run for " + duration / 1000 + "." + duration%1000+" seconds.");
             System.out.println("~"+numRecords / 1000 + "k phrases were generated.");
             System.out.println((numRecords/(duration/1000)/1000) + "k phrases / sec.");

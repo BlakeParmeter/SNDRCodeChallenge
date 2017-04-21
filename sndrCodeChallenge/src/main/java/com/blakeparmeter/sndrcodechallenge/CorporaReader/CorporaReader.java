@@ -34,13 +34,15 @@ public abstract class CorporaReader {
      * @return The value at the index
      */
     public String getCorporaAtIndex(long index){
-         
+        
+        //Shift the index over by one forth the size of the library
+        index = (index+CORPORA_SIZE/4) % CORPORA_SIZE; 
         
         TreeNode val = ROOT_NODE.get((int) index);
         if(val.isValueNode()){
-            return ((ValueNode)val).asText();
+            return ((ValueNode)val).asText() + "("+index+")";
         }else if(val.isObject()){
-            return ((ValueNode)val.get(val.fieldNames().next())).asText();
+            return ((ValueNode)val.get(val.fieldNames().next())).asText() + "("+index+")";
         }else{
             throw new RuntimeException("JSON Token type: " + val.asToken() + " is not supported.");
         }

@@ -6,9 +6,7 @@
 package com.blakeparmeter.sndrcodechallenge.CorporaReader;
 
 import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParser;
 import java.io.File;
-import java.io.IOException;
 
 /**
  *

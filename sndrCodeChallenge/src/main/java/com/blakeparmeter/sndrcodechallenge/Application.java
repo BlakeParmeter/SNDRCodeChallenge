@@ -25,10 +25,13 @@ import java.util.concurrent.Executors;
 public class Application {
     
     private static long currentIndex = -1L;
-    private static long startIndex = -1L;
     private static long maxPhrases = -1L;
     private static final List<CorporaReader> CORPORA_READERS = new ArrayList();
     private static final Scanner INPUT_SCANNER = new Scanner(System.in);
+    private static final List<Long> shuffleSeeds = new ArrayList();
+    private static final int NUM_SHUFFLES = 500;
+    private static final double MAX_RANDOM = 35000;
+    
     
     //Using an executor service so we have a named thread for reading and so
     //subsequent calls are not loaded on the call stack
@@ -66,17 +69,15 @@ public class Application {
             maxPhrases *= reader.CORPORA_SIZE;
         }
         
-        //initalizes the current index if it's not been laoded from a file.
-        if(currentIndex == -1L){
-            //currentIndex = ((long)(Math.random() * maxPhrases) + System.currentTimeMillis()) % maxPhrases;
-            currentIndex = 0;
+        for(int i = 0; i < NUM_SHUFFLES; i++){
+            shuffleSeeds.add((long)(Math.random()*(double)MAX_RANDOM));
         }
         
         //Print welcome text TODO: Format numbers and fix bug with the generated phrases for the overlap case.
         System.out.println("Welcome to the disparate corpora generator!\n" + 
                 CORPORA_READERS.size() + " corpora files have been read into the system. " + 
                 "These files allow for " + maxPhrases + " possible phrases. So far: " + 
-                (currentIndex - (startIndex == -1L ? 0L : startIndex)) + " phrases have been generated.");
+                (currentIndex == -1 ? 0 : currentIndex)+ " phrases have been generated.");
         
         //begin the user input read function
         USER_INPUT_EXECUTOR.submit(new UserInputTask());
@@ -90,15 +91,15 @@ public class Application {
     public static synchronized String getNextDisparateCorpora() throws IOException{
         
         //Handles ensuring that we havent went over the allowed files
-        if(startIndex == currentIndex){
+        if(currentIndex == 0){
             System.err.println("You have excausted all possible unique iterations "
                     + "for the data set! Thank you for using this program! To continue "
                     + "using this program you must specify new input files.");
             System.exit(0);
             
         //Initalizes the start index if this is the first run
-        }else if(startIndex == -1){
-            startIndex = currentIndex;
+        }else if(currentIndex == -1){
+            currentIndex = 0;
         }
         
         //Determine index values
@@ -120,13 +121,30 @@ public class Application {
     }
     
     private static List<Long> getCorporaIndexes() {
+        
+        long indexToUse = currentIndex;
+        indexToUse = shuffle(indexToUse);
+        
         List<Long> retVal = new ArrayList();
         long divisor = 1;
         for(CorporaReader reader : CORPORA_READERS){
-            retVal.add(currentIndex/divisor%reader.CORPORA_SIZE);
+            retVal.add(indexToUse/divisor%reader.CORPORA_SIZE);
             divisor *= reader.CORPORA_SIZE;
         }
         return retVal;
+    }
+    
+    private static long shuffle(long index){
+        for(long mag : shuffleSeeds){
+            index = shuffle(mag, index);
+        }
+        return index;
+    }
+    
+    private static long shuffle(long magnitude, long index){
+        long modulo = index % magnitude;
+        long bucket = index / magnitude;
+        return bucket * magnitude + (magnitude - modulo);
     }
     
     private static class UserInputTask implements Runnable{
