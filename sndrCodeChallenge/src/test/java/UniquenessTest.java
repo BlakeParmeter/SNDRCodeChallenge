@@ -21,37 +21,37 @@ public class UniquenessTest {
     
     private static final int NUM_THREADS = 4;
     private final ExecutorService THREAD_POOL = Executors.newFixedThreadPool(NUM_THREADS);
-    private final long TEST_DURATION = 20 * 1000;//ms
+    private final long TEST_DURATION = 1 * 1000;//ms
         
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
         Application.main(new String[]{
             "https://raw.githubusercontent.com/dariusk/corpora/master/data/words/adjs.json", 
-            "https://raw.githubusercontent.com/dariusk/corpora/master/data/colors/crayola.json", 
+            "https://raw.githubusercontent.com/dariusk/corpora/master/data/colors/crayola.json",
             "https://raw.githubusercontent.com/dariusk/corpora/master/data/humans/occupations.json"});       
     }
     
     @Test
     public void testForUnique() {
         
-        //Start the application
-        
+        //Set up the variables for testing.
         long start = System.currentTimeMillis();
         Set<String> values = Collections.synchronizedSet(new HashSet(10_000_000));
         for(int i = 0; i < NUM_THREADS; i++){
             THREAD_POOL.submit(new DisparateCorporaTestRunnable(values));
         }
         
+        //Sleep for the duration of the test then print the results. 
         try{
             Thread.sleep(TEST_DURATION);
             THREAD_POOL.shutdown();
             long numRecords = values.size();
             long duration = System.currentTimeMillis() - start;
             System.out.println("The test has run for " + duration / 1000 + "." + duration%1000+" seconds.");
-            System.out.println("~"+numRecords / 1000 + "k phrases were generated.");
+            System.out.println("~"+numRecords / 1000 + "k unique phrases were generated.");
             System.out.println((numRecords/(duration/1000)/1000) + "k phrases / sec.");
-        }catch(Exception ex){
-            
+        }catch(InterruptedException ex){
+            //Do nothing with the exception, the thread should not interrupt.
         }
     }
     

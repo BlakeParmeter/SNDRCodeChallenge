@@ -21,10 +21,15 @@ public abstract class CorporaReader {
     public final int CORPORA_SIZE;
     public final TreeNode ROOT_NODE;  
     
+    /**
+     * Reads the data from the corpora file and loads into memory. 
+     * @param parser
+     * @throws Exception 
+     */
     public CorporaReader(JsonParser parser) throws Exception{
         moveParserToStartOfFirstArray(parser);
         ObjectMapper mapper = new ObjectMapper();
-        ROOT_NODE = mapper.readTree(parser);   
+        ROOT_NODE = mapper.readTree(parser);
         CORPORA_SIZE = ROOT_NODE.size();
     }
     
@@ -34,15 +39,11 @@ public abstract class CorporaReader {
      * @return The value at the index
      */
     public String getCorporaAtIndex(long index){
-        
-        //Shift the index over by one forth the size of the library
-        index = (index+CORPORA_SIZE/4) % CORPORA_SIZE; 
-        
         TreeNode val = ROOT_NODE.get((int) index);
         if(val.isValueNode()){
-            return ((ValueNode)val).asText() + "("+index+")";
+            return ((ValueNode)val).asText();
         }else if(val.isObject()){
-            return ((ValueNode)val.get(val.fieldNames().next())).asText() + "("+index+")";
+            return ((ValueNode)val.get(val.fieldNames().next())).asText();
         }else{
             throw new RuntimeException("JSON Token type: " + val.asToken() + " is not supported.");
         }

@@ -5,14 +5,18 @@
  */
 package com.blakeparmeter.sndrcodechallenge;
 
+import com.blakeparmeter.sndrcodechallenge.Beans.IteratorConfig;
 import com.blakeparmeter.sndrcodechallenge.CorporaReader.CorporaFileReader;
 import com.blakeparmeter.sndrcodechallenge.CorporaReader.CorporaReader;
 import com.blakeparmeter.sndrcodechallenge.CorporaReader.CorporaURLReader;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
@@ -24,11 +28,10 @@ import java.util.concurrent.Executors;
  */
 public class Application {
     
-    private static long currentIndex = -1L;
-    private static long maxPhrases = -1L;
+    private static IteratorConfig iteratorConfig = new IteratorConfig();
     private static final List<CorporaReader> CORPORA_READERS = new ArrayList();
     private static final Scanner INPUT_SCANNER = new Scanner(System.in);
-    private static final List<Long> shuffleSeeds = new ArrayList();
+    public static final String INDEX_FILE_PATH = "index";
     
     //Using an executor service so we have a named thread for reading and so
     //subsequent calls are not loaded on the call stack
@@ -57,22 +60,42 @@ public class Application {
             }
         }
         
-        //Test for index file and load if found. 
-        //TODO:
-        
         //calculate the total number of possible phrases
-        maxPhrases = 1;
+        long maxPhrases = 1;
         for(CorporaReader reader : CORPORA_READERS){
             maxPhrases *= reader.CORPORA_SIZE;
         }
         
-        shuffleSeeds.addAll(getFactors(maxPhrases));
+        //Test for index file and load if found. 
+        try{
+            ObjectMapper mapper = new ObjectMapper();
+            File indexFile = new File(INDEX_FILE_PATH);
+            iteratorConfig = mapper.readValue(indexFile, iteratorConfig.getClass());
+            if(iteratorConfig.getMaxPhrases() == maxPhrases){
+                System.out.println("Index file read!");
+            }else{
+                iteratorConfig = buildIteratorConfig(maxPhrases);
+                System.out.println("An index file was found but the corpora files used to create it "
+                        + "are not the same filed used in this run. The index file will be recreated.");
+            }
+            
+        //Sets the initial values for the iterator variables
+        }catch (UnrecognizedPropertyException upex){
+            System.out.println("The index file is invalid, recreating index file...");
+            iteratorConfig = buildIteratorConfig(maxPhrases);
+        }catch(IOException ioex){
+            System.out.println("The index file could not be found, recreating index file...");
+            iteratorConfig = buildIteratorConfig(maxPhrases);
+        }finally{
+            new File(INDEX_FILE_PATH).delete();//Always delete the index file on load.
+        }
+        
         
         //Print welcome text TODO: Format numbers and fix bug with the generated phrases for the overlap case.
         System.out.println("Welcome to the disparate corpora generator!\n" + 
                 CORPORA_READERS.size() + " corpora files have been read into the system. " + 
-                "These files allow for " + maxPhrases + " possible phrases. So far: " + 
-                (currentIndex == -1 ? 0 : currentIndex)+ " phrases have been generated.");
+                "These files allow for " + maxPhrases + " possible phrases. There are: " + 
+                iteratorConfig.getNumRemaining() + " phrases remaing to be generated.");
         
         //begin the user input read function
         USER_INPUT_EXECUTOR.submit(new UserInputTask());
@@ -86,22 +109,18 @@ public class Application {
     public static synchronized String getNextDisparateCorpora() throws IOException{
         
         //Handles ensuring that we havent went over the allowed files
-        if(currentIndex == 0){
+        if(iteratorConfig.isFinished()){
             System.err.println("You have excausted all possible unique iterations "
                     + "for the data set! Thank you for using this program! To continue "
                     + "using this program you must specify new input files.");
             System.exit(0);
-            
-        //Initalizes the start index if this is the first run
-        }else if(currentIndex == -1){
-            currentIndex = 0;
         }
         
         //Determine index values
-        List<Long> indexes = getCorporaIndexes();
-        String retVal = "";
+        List<Long> indexes = getCorporaIndexes(iteratorConfig.getCurrentIndex(), iteratorConfig.getShuffleValues());
         
         //get the values from the corpora readers and format.
+        String retVal = "";
         for(int i = 0; i < indexes.size(); i++){
             String str = CORPORA_READERS.get(i).getCorporaAtIndex(indexes.get(i)).toLowerCase();
             retVal += Character.toUpperCase(str.charAt(0));
@@ -111,17 +130,18 @@ public class Application {
         }
         
         //iterates the current index
-        currentIndex = (currentIndex + 1) % maxPhrases;
+        iteratorConfig.incrementCurrentIndex();
         return retVal;
     }
     
-    private static List<Long> getCorporaIndexes() {
+    private static List<Long> getCorporaIndexes(long currentIndex, List<Long> shuffleVars) {
         
-        long indexToUse = currentIndex;
-        indexToUse = shuffle(shuffleSeeds, indexToUse);
-        
+        //Sets inital values. 
         List<Long> retVal = new ArrayList();
         long divisor = 1;
+        long indexToUse = shuffle(shuffleVars, currentIndex);
+        
+        //determines which indexes to get from the readers based on the index generated by the shuffle method
         for(CorporaReader reader : CORPORA_READERS){
             retVal.add(indexToUse/divisor%reader.CORPORA_SIZE);
             divisor *= reader.CORPORA_SIZE;
@@ -148,6 +168,15 @@ public class Application {
         }
     }
     
+    private static IteratorConfig buildIteratorConfig(long maxPhrases){
+        IteratorConfig retVal = new IteratorConfig();
+        retVal.setStartIndex((long)(Math.random() * maxPhrases));
+        retVal.setShuffleValues(getFactors(maxPhrases));
+        retVal.setMaxPhrases(maxPhrases);
+        Collections.shuffle(retVal.getShuffleValues());
+        return retVal;
+    }
+    
     private static List<Long> getFactors(long num){
         List<Long> retVal = new ArrayList();
         for(long i = 2; i <= Math.sqrt(num); i++) {
@@ -172,6 +201,10 @@ public class Application {
         long modulo = index % magnitude;
         long bucket = index / magnitude;
         return bucket * magnitude + (magnitude - modulo);
+    }
+    
+    public static IteratorConfig getIteratorConfig(){
+        return iteratorConfig;
     }
 }
 
